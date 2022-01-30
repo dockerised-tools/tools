@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+
+set -eu
+
+readonly TOOL_PATH=$(realpath "$(dirname "$(realpath "$0")")/../..")
+
+source "${TOOL_PATH}"/config/global.env
+source "${TOOL_PATH}"/config/tool-versions.inc.bash
+
+function buildDockerImage() {
+    local dockerImageTag="${1}"
+
+    title "Build Docker image ${dockerImageTag}"
+
+    DOCKER_BUILDKIT=1 \
+        docker \
+            build \
+                --target=tool \
+                --pull \
+                --tag="${dockerImageTag}" \
+                ${DOCKER_BUILD_PARAMETERS} \
+                --build-arg PHP_DOCKER_IMAGE="${PHP_DOCKER_IMAGE}" \
+                --build-arg COMPOSER_DOCKER_IMAGE="${COMPOSER_DOCKER_IMAGE}" \
+                --build-arg TOOL_VERSION="${TOOL_VERSION}" \
+                "${TOOL_PATH}"/docker
+}
+
+function pushDockerImage() {
+    local dockerImageTag="${1}"
+
+    title "Push Docker image ${dockerImageTag}"
+
+    docker push ${dockerImageTag}
+}
+
+function buildAndPushDockerImage() {
+    local dockerImageTag="${1}"
+
+    buildDockerImage "${dockerImageTag}"
+
+    if [ ${PUSH_DOCKER_IMAGE} == true ]; then
+        pushDockerImage "${dockerImageTag}"
+    fi
+}
+
+function title() {
+    local titleLength=${#1}
+    printf "\n\e[46m\e[1;37m    "
+    for x in $(seq 1 ${titleLength}); do printf " "; done;
+    printf "\e[0m\n"
+
+    printf "\e[46m\e[1;37m  ${1}  \e[0m\n"
+    printf "\e[46m\e[1;37m    "
+    for x in $(seq 1 ${titleLength}); do printf " "; done;
+    printf "\e[0m\n\n"
+}
+
+readonly TOOL_VERSION="${1:-}"
+
+if [ "${TOOL_VERSION}" == "" ]; then
+    printf "\e[41m First parameter should be the tool version (ex: 1.2.3) \e[0m\n"
+    exit 1
+fi
+
+readonly versionParts=(${TOOL_VERSION//./ })
+if [ ${#versionParts[@]} != 3 ]; then
+    printf "\e[41m Tool version should respect semantic versioning (ex: 1.2.3) \e[0m\n"
+    exit 1
+fi
+
+DOCKER_BUILD_PARAMETERS=""
+PUSH_DOCKER_IMAGE=false
+for param in "${@}"; do
+    if [ "${param}" == "--refresh" ]; then
+        DOCKER_BUILD_PARAMETERS="--no-cache"
+    elif [ "${param}" == "--push" ]; then
+        PUSH_DOCKER_IMAGE=true
+    fi
+done
+
+buildAndPushDockerImage "${TOOL_DOCKER_IMAGE_PREFIX}:${versionParts[0]}.${versionParts[1]}"
+
+for toolLatestMinorVersion in "${TOOL_LATEST_MINOR_VERSIONS[@]}"; do
+    if [ "${toolLatestMinorVersion}" == "${TOOL_VERSION}" ]; then
+        buildAndPushDockerImage "${TOOL_DOCKER_IMAGE_PREFIX}:${versionParts[0]}"
+        break;
+    fi
+done
+
+if [ "${TOOL_VERSION}" == "${TOOL_LATEST_VERSION}" ]; then
+    buildAndPushDockerImage "${TOOL_DOCKER_IMAGE_PREFIX}:latest"
+fi
