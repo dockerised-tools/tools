@@ -1,0 +1,20 @@
+name: build-docker-image
+description: Build Docker image
+
+inputs:
+    DOCKER_HUB_TOKEN:
+        description: hub.docker.com token
+        required: true
+    TOOL_REPOSITORY:
+        description: GitHub tool repository name
+        required: true
+
+runs:
+    using: composite
+    steps:
+        -
+            shell: bash
+            run: echo "${{ inputs.DOCKER_HUB_TOKEN }}" | docker login --username dockerisedtools --password-stdin
+        -
+            shell: bash
+            run: src/${{ inputs.TOOL_REPOSITORY }}/bin/docker/build ${{ inputs.TOOL_VERSION }} --push
