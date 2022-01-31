@@ -8,6 +8,9 @@ inputs:
     TOOL_REPOSITORY:
         description: GitHub tool repository name
         required: true
+    TOOL_VERSION:
+        description: GitHub tool version
+        required: true
 
 runs:
     using: composite
