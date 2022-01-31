@@ -3,7 +3,7 @@ on:
     workflow_dispatch: ~
 jobs:
     maglnet_composer-require-checker:
-        name: Build Docker images
+        name: maglnet_composer-require-checker
         runs-on: ubuntu-latest
         strategy:
             matrix:
@@ -13,6 +13,6 @@ jobs:
             -
                 uses: ./.github/actions/build-docker-image
                 with:
-                    DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN }}
+                    DOCKER_HUB_TOKEN: "test me"
                     TOOL_REPOSITORY: maglnet/composer-require-checker
                     TOOL_VERSION: ${{ matrix.TOOL_VERSION }}
