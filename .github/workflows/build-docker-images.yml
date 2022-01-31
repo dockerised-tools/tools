@@ -2,17 +2,27 @@ name: Build Docker images
 on:
     workflow_dispatch: ~
 jobs:
-    maglnet_composer-require-checker:
-        name: maglnet_composer-require-checker
+    composer-require-checker_versions:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
+            -
+                id: tool-versions
+                run: echo "::set-output name=tool-versions::$(cat src/tools/maglnet/composer-require-checker/config/tool-versions.json)"
+        outputs:
+            tool-versions: ${{ steps.tool-versions.outputs.tool-versions }}
+    composer-require-checker:
+        name: composer-require-checker
+        needs: composer-require-checker_versions
         runs-on: ubuntu-latest
         strategy:
             matrix:
-                TOOL_VERSION: [3.0.0, 3.1.0, 3.2.0, 3.3.1, 3.4.0, 3.5.1, 3.6.0, 3.7.0, 3.8.0, 4.0.0]
+                TOOL_VERSION: ${{ fromJson(needs.composer-require-checker_versions.outputs.tool-versions) }}
         steps:
             - uses: actions/checkout@v2
             -
                 uses: ./.github/actions/build-docker-image
                 with:
-                    DOCKER_HUB_TOKEN: "test me"
+                    DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN }}
                     TOOL_REPOSITORY: maglnet/composer-require-checker
                     TOOL_VERSION: ${{ matrix.TOOL_VERSION }}

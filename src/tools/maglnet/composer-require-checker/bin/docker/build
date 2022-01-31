@@ -5,7 +5,7 @@ set -eu
 readonly TOOL_PATH=$(realpath "$(dirname "$(realpath "$0")")/../..")
 
 source "${TOOL_PATH}"/config/global.env
-source "${TOOL_PATH}"/config/tool-versions.inc.bash
+source "${TOOL_PATH}"/config/tool.inc.bash
 
 function buildDockerImage() {
     local dockerImageTag="${1}"
