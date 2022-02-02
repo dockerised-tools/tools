@@ -12,17 +12,19 @@ function buildDockerImage() {
 
     title "Build Docker image ${dockerImageTag}"
 
-    DOCKER_BUILDKIT=1 \
-        docker \
-            build \
-                --target=tool \
-                --pull \
-                --tag="${dockerImageTag}" \
-                ${DOCKER_BUILD_PARAMETERS} \
-                --build-arg PHP_DOCKER_IMAGE="${PHP_DOCKER_IMAGE}" \
-                --build-arg COMPOSER_DOCKER_IMAGE="${COMPOSER_DOCKER_IMAGE}" \
-                --build-arg TOOL_VERSION="${TOOL_VERSION}" \
-                "${TOOL_PATH}"/docker
+    if [ "${DRY_RUN}" == false ]; then
+        DOCKER_BUILDKIT=1 \
+            docker \
+                build \
+                    --target=tool \
+                    --pull \
+                    --tag="${dockerImageTag}" \
+                    ${DOCKER_BUILD_PARAMETERS} \
+                    --build-arg PHP_DOCKER_IMAGE="${PHP_DOCKER_IMAGE}" \
+                    --build-arg COMPOSER_DOCKER_IMAGE="${COMPOSER_DOCKER_IMAGE}" \
+                    --build-arg TOOL_VERSION="${TOOL_VERSION}" \
+                    "${TOOL_PATH}"/docker
+    fi
 }
 
 function pushDockerImage() {
@@ -30,7 +32,9 @@ function pushDockerImage() {
 
     title "Push Docker image ${dockerImageTag}"
 
-    docker push ${dockerImageTag}
+    if [ "${DRY_RUN}" == false ]; then
+        docker push ${dockerImageTag}
+    fi
 }
 
 function buildAndPushDockerImage() {
@@ -56,7 +60,6 @@ function title() {
 }
 
 readonly TOOL_VERSION="${1:-}"
-
 if [ "${TOOL_VERSION}" == "" ]; then
     printf "\e[41m First parameter should be the tool version (ex: 1.2.3) \e[0m\n"
     exit 1
@@ -68,25 +71,40 @@ if [ ${#versionParts[@]} != 3 ]; then
     exit 1
 fi
 
+readonly PHP_DOCKER_IMAGE_PART="${2:-}"
+if [ "${PHP_DOCKER_IMAGE_PART}" == "" ]; then
+    printf "\e[41m Second parameter should be the PHP part of the Docker image (ex: php-8.0) \e[0m\n"
+    exit 1
+fi
+
+readonly PHP_DOCKER_IMAGE="${3:-}"
+if [ "${PHP_DOCKER_IMAGE}" == "" ]; then
+    printf "\e[41m Third parameter should be the Docker FROM value (ex: php:8.0.15-cli-alpine3.15) \e[0m\n"
+    exit 1
+fi
+
 DOCKER_BUILD_PARAMETERS=""
 PUSH_DOCKER_IMAGE=false
+DRY_RUN=false
 for param in "${@}"; do
     if [ "${param}" == "--refresh" ]; then
         DOCKER_BUILD_PARAMETERS="--no-cache"
     elif [ "${param}" == "--push" ]; then
         PUSH_DOCKER_IMAGE=true
+    elif [ "${param}" == "--dry-run" ]; then
+        DRY_RUN=true
     fi
 done
 
-buildAndPushDockerImage "${TOOL_DOCKER_IMAGE_PREFIX}:${versionParts[0]}.${versionParts[1]}"
+buildAndPushDockerImage "${TOOL_DOCKER_IMAGE_PREFIX}:${versionParts[0]}.${versionParts[1]}-${PHP_DOCKER_IMAGE_PART}"
 
 for toolLatestMinorVersion in "${TOOL_LATEST_MINOR_VERSIONS[@]}"; do
     if [ "${toolLatestMinorVersion}" == "${TOOL_VERSION}" ]; then
-        buildAndPushDockerImage "${TOOL_DOCKER_IMAGE_PREFIX}:${versionParts[0]}"
+        buildAndPushDockerImage "${TOOL_DOCKER_IMAGE_PREFIX}:${versionParts[0]}-${PHP_DOCKER_IMAGE_PART}"
         break;
     fi
 done
 
 if [ "${TOOL_VERSION}" == "${TOOL_LATEST_VERSION}" ]; then
-    buildAndPushDockerImage "${TOOL_DOCKER_IMAGE_PREFIX}:latest"
+    buildAndPushDockerImage "${TOOL_DOCKER_IMAGE_PREFIX}:latest-${PHP_DOCKER_IMAGE_PART}"
 fi

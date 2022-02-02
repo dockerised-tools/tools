@@ -8,8 +8,8 @@ inputs:
     TOOL_REPOSITORY:
         description: GitHub tool repository name
         required: true
-    TOOL_VERSION:
-        description: GitHub tool version
+    BUILD_PARAMETERS:
+        description: Parameters for bin/docker/build
         required: true
 
 runs:
@@ -20,4 +20,4 @@ runs:
             run: echo "${{ inputs.DOCKER_HUB_TOKEN }}" | docker login --username dockerisedtools --password-stdin
         -
             shell: bash
-            run: src/${{ inputs.TOOL_REPOSITORY }}/bin/docker/build ${{ inputs.TOOL_VERSION }} --push
+            run: src/tools/${{ inputs.TOOL_REPOSITORY }}/bin/docker/build ${{ inputs.BUILD_PARAMETERS }} --push

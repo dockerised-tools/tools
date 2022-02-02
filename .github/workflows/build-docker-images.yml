@@ -2,22 +2,23 @@ name: Build Docker images
 on:
     workflow_dispatch: ~
 jobs:
-    composer-require-checker_versions:
+    composer-require-checker_build-parameters:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v2
             -
-                id: tool-versions
-                run: echo "::set-output name=tool-versions::$(cat src/tools/maglnet/composer-require-checker/config/tool-versions.json)"
+                id: build-parameters
+                run: echo "::set-output name=build-parameters::$(cat src/tools/maglnet/composer-require-checker/config/build-parameters.json | tr '\r\n' ' ')"
         outputs:
-            tool-versions: ${{ steps.tool-versions.outputs.tool-versions }}
+            build-parameters: ${{ steps.build-parameters.outputs.build-parameters }}
+
     composer-require-checker:
         name: composer-require-checker
-        needs: composer-require-checker_versions
+        needs: composer-require-checker_build-parameters
         runs-on: ubuntu-latest
         strategy:
             matrix:
-                TOOL_VERSION: ${{ fromJson(needs.composer-require-checker_versions.outputs.tool-versions) }}
+                BUILD_PARAMETERS: ${{ fromJson(needs.composer-require-checker_build-parameters.outputs.build-parameters) }}
         steps:
             - uses: actions/checkout@v2
             -
@@ -25,4 +26,4 @@ jobs:
                 with:
                     DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN }}
                     TOOL_REPOSITORY: maglnet/composer-require-checker
-                    TOOL_VERSION: ${{ matrix.TOOL_VERSION }}
+                    BUILD_PARAMETERS: ${{ matrix.BUILD_PARAMETERS }}
