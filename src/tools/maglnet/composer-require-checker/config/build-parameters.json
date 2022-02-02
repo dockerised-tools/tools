@@ -1,0 +1,10 @@
+[
+    "3.7.0 php7.4 php:7.4.27-cli-alpine3.15",
+    "3.7.0 php8.0 php:8.0.15-cli-alpine3.15",
+    "3.7.0 php8.1 php:8.1.2-cli-alpine3.15",
+    "3.8.0 php7.4 php:7.4.27-cli-alpine3.15",
+    "3.8.0 php8.0 php:8.0.15-cli-alpine3.15",
+    "3.8.0 php8.1 php:8.1.2-cli-alpine3.15",
+    "4.0.0 php8.0 php:8.0.15-cli-alpine3.15",
+    "4.0.0 php8.1 php:8.1.2-cli-alpine3.15"
+]
