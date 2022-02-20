@@ -9,6 +9,7 @@ source "${TOOL_PATH}"/config/tool.inc.bash
 
 function buildDockerImage() {
     local dockerImageTag="${1}"
+    local dockerFileSuffix="${2}"
 
     title "Build Docker image ${dockerImageTag}"
 
@@ -18,12 +19,13 @@ function buildDockerImage() {
                 build \
                     --target=tool \
                     --pull \
-                    --tag="${dockerImageTag}" \
+                    --tag "${dockerImageTag}" \
+                    --file "${TOOL_PATH}/docker/${dockerFileSuffix}/Dockerfile" \
                     ${DOCKER_BUILD_PARAMETERS} \
                     --build-arg PHP_DOCKER_IMAGE="${PHP_DOCKER_IMAGE}" \
                     --build-arg COMPOSER_DOCKER_IMAGE="${COMPOSER_DOCKER_IMAGE}" \
                     --build-arg TOOL_VERSION="${TOOL_VERSION}" \
-                    "${TOOL_PATH}"/docker
+                    "${TOOL_PATH}/docker/${dockerFileSuffix}"
     fi
 }
 
@@ -39,8 +41,9 @@ function pushDockerImage() {
 
 function buildAndPushDockerImage() {
     local dockerImageTag="${1}"
+    local dockerFileSuffix="${2}"
 
-    buildDockerImage "${dockerImageTag}"
+    buildDockerImage "${dockerImageTag}" "${dockerFileSuffix}"
 
     if [ ${PUSH_DOCKER_IMAGE} == true ]; then
         pushDockerImage "${dockerImageTag}"
@@ -65,19 +68,25 @@ if [ "${TOOL_VERSION}" == "" ]; then
     exit 1
 fi
 
-readonly versionParts=(${TOOL_VERSION//./ })
-if [ ${#versionParts[@]} != 3 ]; then
+readonly VERSION_PARTS=(${TOOL_VERSION//./ })
+if [ ${#VERSION_PARTS[@]} != 3 ]; then
     printf "\e[41m Tool version should respect semantic versioning (ex: 1.2.3) \e[0m\n"
     exit 1
 fi
 
 readonly PHP_DOCKER_IMAGE_PART="${2:-}"
 if [ "${PHP_DOCKER_IMAGE_PART}" == "" ]; then
-    printf "\e[41m Second parameter should be the PHP part of the Docker image (ex: php-8.0) \e[0m\n"
+    printf "\e[41m Second parameter should be the PHP part of the Docker image (ex: php-8.1) \e[0m\n"
     exit 1
 fi
 
-readonly PHP_DOCKER_IMAGE="${3:-}"
+readonly PHP_DOCKER_IMAGE_SUFFIX="${3:-}"
+if [ "${PHP_DOCKER_IMAGE_SUFFIX}" == "" ]; then
+    printf "\e[41m Third parameter should be the Docker image suffix (ex: alpine, alpine-allexts) \e[0m\n"
+    exit 1
+fi
+
+readonly PHP_DOCKER_IMAGE="${4:-}"
 if [ "${PHP_DOCKER_IMAGE}" == "" ]; then
     printf "\e[41m Third parameter should be the Docker FROM value (ex: php:8.0.15-cli-alpine3.15) \e[0m\n"
     exit 1
@@ -96,15 +105,22 @@ for param in "${@}"; do
     fi
 done
 
-buildAndPushDockerImage "${TOOL_DOCKER_IMAGE_PREFIX}:${versionParts[0]}.${versionParts[1]}-${PHP_DOCKER_IMAGE_PART}"
+buildAndPushDockerImage \
+    "${TOOL_DOCKER_IMAGE_PREFIX}:${VERSION_PARTS[0]}.${VERSION_PARTS[1]}-${PHP_DOCKER_IMAGE_PART}-${PHP_DOCKER_IMAGE_SUFFIX}" \
+    "${PHP_DOCKER_IMAGE_SUFFIX}"
+
 
 for toolLatestMinorVersion in "${TOOL_LATEST_MINOR_VERSIONS[@]}"; do
     if [ "${toolLatestMinorVersion}" == "${TOOL_VERSION}" ]; then
-        buildAndPushDockerImage "${TOOL_DOCKER_IMAGE_PREFIX}:${versionParts[0]}-${PHP_DOCKER_IMAGE_PART}"
+        buildAndPushDockerImage \
+            "${TOOL_DOCKER_IMAGE_PREFIX}:${VERSION_PARTS[0]}-${PHP_DOCKER_IMAGE_PART}-${PHP_DOCKER_IMAGE_SUFFIX}" \
+            "${PHP_DOCKER_IMAGE_SUFFIX}"
         break;
     fi
 done
 
 if [ "${TOOL_VERSION}" == "${TOOL_LATEST_VERSION}" ]; then
-    buildAndPushDockerImage "${TOOL_DOCKER_IMAGE_PREFIX}:latest-${PHP_DOCKER_IMAGE_PART}"
+    buildAndPushDockerImage \
+        "${TOOL_DOCKER_IMAGE_PREFIX}:latest-${PHP_DOCKER_IMAGE_PART}-${PHP_DOCKER_IMAGE_SUFFIX}" \
+        "${PHP_DOCKER_IMAGE_SUFFIX}"
 fi
