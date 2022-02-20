@@ -18,4 +18,4 @@ RUN \
 
 WORKDIR /app
 
-ENTRYPOINT ["php", "-d", "memory_limit=512M", "${TOOL_BIN_PATHNAME}"]
+ENTRYPOINT ["php", "-d", "memory_limit=512M", "/usr/local/bin/composer-require-checker"]
